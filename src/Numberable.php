@@ -6,6 +6,9 @@ use Illuminate\Support\Number;
 use Illuminate\Support\Traits\Macroable;
 use Stringable;
 
+/**
+ * @phpstan-consistent-constructor
+ */
 class Numberable implements Stringable
 {
     use Macroable;
@@ -22,6 +25,7 @@ class Numberable implements Stringable
 
     protected ?string $formatStyle = null;
 
+    /** @var array<string, mixed> */
     protected array $formatOptions = [];
 
     /** @var array<string, callable> */
@@ -97,6 +101,9 @@ class Numberable implements Stringable
     }
 
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
     public function asPercentage(array $options = []): static
     {
         $clone = clone $this;
@@ -106,6 +113,9 @@ class Numberable implements Stringable
         return $clone;
     }
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
     public function asCurrency(?string $currency = null, array $options = []): static
     {
         $clone = clone $this;
@@ -118,6 +128,9 @@ class Numberable implements Stringable
         return $clone;
     }
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
     public function asOrdinal(array $options = []): static
     {
         $clone = clone $this;
@@ -127,6 +140,9 @@ class Numberable implements Stringable
         return $clone;
     }
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
     public function asSpell(array $options = []): static
     {
         $clone = clone $this;
@@ -136,6 +152,9 @@ class Numberable implements Stringable
         return $clone;
     }
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
     public function asFileSize(array $options = []): static
     {
         $clone = clone $this;
@@ -145,6 +164,9 @@ class Numberable implements Stringable
         return $clone;
     }
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
     public function asAbbreviated(array $options = []): static
     {
         $clone = clone $this;
@@ -218,7 +240,7 @@ class Numberable implements Stringable
     public function round(int $precision = 0, int $mode = PHP_ROUND_HALF_UP): static
     {
         $clone = clone $this;
-        $clone->value = round($this->value, $precision, $mode);
+        $clone->value = round($this->value, $precision, $mode); // @phpstan-ignore argument.type
 
         return $clone;
     }
@@ -298,27 +320,36 @@ class Numberable implements Stringable
             ])));
         }
 
-        return Number::format($this->value, $precision, $maxPrecision, $locale);
+        return (string) Number::format($this->value, $precision, $maxPrecision, $locale);
     }
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
     public function formatAs(string $style, array $options = []): string
     {
+        /** @var ?string $locale */
         $locale = $options['locale'] ?? $this->locale;
+        /** @var ?int $precision */
         $precision = $options['precision'] ?? $this->precision;
+        /** @var ?string $currency */
         $currency = $options['currency'] ?? $this->currency;
 
         if (isset(static::$customFormats[$style])) {
-            return (string) (static::$customFormats[$style])($this->value, $options);
+            /** @var callable(int|float, array<string, mixed>): (string|int|float) $callback */
+            $callback = static::$customFormats[$style];
+
+            return (string) $callback($this->value, $options);
         }
 
-        return match ($style) {
+        return (string) match ($style) {
             'currency'      => Number::currency($this->value, $currency ?? 'USD', $locale),
             'percentage'    => Number::percentage($this->value, $precision ?? 0, null, $locale),
             'spell'         => Number::spell($this->value, $locale),
             'ordinal'       => Number::ordinal($this->value, $locale),
             'spellOrdinal'  => Number::spellOrdinal($this->value, $locale),
             'abbreviated',
-            'summarized'    => Number::abbreviate($this->value, $precision ?? 0, null, $locale),
+            'summarized'    => Number::abbreviate($this->value, $precision ?? 0),
             'fileSize',
             'humanReadable' => Number::fileSize($this->value, $precision ?? 0),
             default         => throw new \InvalidArgumentException("Unknown format style: [{$style}]"),
