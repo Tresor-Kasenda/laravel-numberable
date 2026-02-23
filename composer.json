@@ -1,0 +1,59 @@
+{
+    "name": "tresor-kasenda/laravel-numberable",
+    "description": "A fluent, expressive API for numeric operations in Laravel — like Stringable but for numbers.",
+    "type": "library",
+    "keywords": [
+        "laravel",
+        "number",
+        "fluent",
+        "formatting",
+        "math"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Tresor Kasenda",
+            "email": "tresorkasendat@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "illuminate/support": "^10.0|^11.0|^12.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.0|^4.0",
+        "orchestra/testbench": "^9.0|^10.0",
+        "phpstan/phpstan": "^2.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "TresorKasenda\\Numberable\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "TresorKasenda\\Numberable\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "TresorKasenda\\Numberable\\NumberableServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "analyse": "phpstan analyse src --level=8"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
