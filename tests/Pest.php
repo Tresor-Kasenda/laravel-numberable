@@ -11,7 +11,7 @@
 |
 */
 
-pest()->extend(TresorKasenda\Numberable\Tests\TestCase::class)
+uses(TresorKasenda\Numberable\Tests\TestCase::class)
  // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Feature');
 
