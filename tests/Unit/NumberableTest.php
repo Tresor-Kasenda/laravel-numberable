@@ -699,3 +699,76 @@ test('number() helper returns Numberable', function () {
 test('number() helper returns null for null', function () {
     expect(number(null))->toBeNull();
 });
+
+
+test('macro() can register and call a macro', function () {
+    Numberable::macro('double', function () {
+        return $this->multiply(2);
+    });
+
+    $result = Numberable::make(21)->double();
+
+    expect($result)->toBeInstanceOf(Numberable::class)
+        ->and($result->value())->toBe(42);
+
+    Numberable::flushMacros();
+});
+
+test('hasMacro() returns true for registered macros', function () {
+    Numberable::macro('triple', fn () => $this->multiply(3));
+
+    expect(Numberable::hasMacro('triple'))->toBeTrue();
+    expect(Numberable::hasMacro('nonexistent'))->toBeFalse();
+
+    Numberable::flushMacros();
+});
+
+test('macro can access the instance value', function () {
+    Numberable::macro('squared', function () {
+        return $this->pow(2);
+    });
+
+    $result = Numberable::make(5)->squared();
+
+    expect($result->value())->toEqual(25);
+
+    Numberable::flushMacros();
+});
+
+test('macro can be chained with built-in methods', function () {
+    Numberable::macro('addTen', function () {
+        return $this->add(10);
+    });
+
+    $result = Numberable::make(5)->addTen()->multiply(2)->value();
+
+    expect($result)->toBe(30);
+
+    Numberable::flushMacros();
+});
+
+test('calling an unregistered macro throws BadMethodCallException', function () {
+    Numberable::make(1)->nonExistentMacro();
+})->throws(\BadMethodCallException::class);
+
+test('flushMacros() removes all registered macros', function () {
+    Numberable::macro('temp', fn () => $this);
+
+    expect(Numberable::hasMacro('temp'))->toBeTrue();
+
+    Numberable::flushMacros();
+
+    expect(Numberable::hasMacro('temp'))->toBeFalse();
+});
+
+test('macro with parameters works', function () {
+    Numberable::macro('addAmount', function (int|float $amount) {
+        return $this->add($amount);
+    });
+
+    $result = Numberable::make(200)->addAmount(30);
+
+    expect($result->value())->toBe(230);
+
+    Numberable::flushMacros();
+});
