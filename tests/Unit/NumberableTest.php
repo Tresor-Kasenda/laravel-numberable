@@ -772,3 +772,97 @@ test('macro with parameters works', function () {
 
     Numberable::flushMacros();
 });
+
+test('of() is an alias of make()', function () {
+    $number = Numberable::of(42);
+
+    expect($number)->toBeInstanceOf(Numberable::class)
+        ->and($number->value())->toBe(42);
+});
+
+test('from() parses numeric strings', function () {
+    $number = Numberable::from('12,5');
+
+    expect($number->value())->toBe(12.5);
+});
+
+test('clamp() constrains a value between min and max', function () {
+    expect(Numberable::make(15)->clamp(0, 10)->value())->toBe(10)
+        ->and(Numberable::make(-5)->clamp(0, 10)->value())->toBe(0)
+        ->and(Numberable::make(7)->clamp(0, 10)->value())->toBe(7);
+});
+
+test('trim() removes trailing decimal zeros from the numeric value', function () {
+    $trimmed = Numberable::make(10.0)->trim();
+
+    expect($trimmed->value())->toBe(10)
+        ->and($trimmed->isInt())->toBeTrue();
+});
+
+test('when() applies callback conditionally via Conditionable', function () {
+    $result = Numberable::make(10)
+        ->when(true, fn (Numberable $number) => $number->add(5))
+        ->when(false, fn (Numberable $number) => $number->add(100));
+
+    expect($result->value())->toBe(15);
+});
+
+test('unless() applies callback when condition is false', function () {
+    $result = Numberable::make(10)
+        ->unless(true, fn (Numberable $number) => $number->add(100))
+        ->unless(false, fn (Numberable $number) => $number->add(5));
+
+    expect($result->value())->toBe(15);
+});
+
+test('tap() runs a side effect and returns the same instance', function () {
+    $captured = null;
+
+    $number = Numberable::make(10);
+    $tapped = $number->tap(function (Numberable $instance) use (&$captured) {
+        $captured = $instance->value();
+    });
+
+    expect($captured)->toBe(10)
+        ->and($tapped)->toBe($number);
+});
+
+test('isEven() and isOdd() work for integers and non-integers', function () {
+    expect(Numberable::make(4)->isEven())->toBeTrue()
+        ->and(Numberable::make(4)->isOdd())->toBeFalse()
+        ->and(Numberable::make(5)->isOdd())->toBeTrue()
+        ->and(Numberable::make(5.5)->isEven())->toBeFalse()
+        ->and(Numberable::make(5.5)->isOdd())->toBeFalse();
+});
+
+test('isMultipleOf() works with integers and floats', function () {
+    expect(Numberable::make(12)->isMultipleOf(3))->toBeTrue()
+        ->and(Numberable::make(12)->isMultipleOf(5))->toBeFalse()
+        ->and(Numberable::make(0.3)->isMultipleOf(0.1))->toBeTrue();
+});
+
+test('isMultipleOf() throws on zero divisor', function () {
+    Numberable::make(12)->isMultipleOf(0);
+})->throws(\DivisionByZeroError::class, 'Cannot determine multiple of zero.');
+
+test('isPrime() detects prime numbers', function () {
+    expect(Numberable::make(2)->isPrime())->toBeTrue()
+        ->and(Numberable::make(17)->isPrime())->toBeTrue()
+        ->and(Numberable::make(18)->isPrime())->toBeFalse()
+        ->and(Numberable::make(1)->isPrime())->toBeFalse()
+        ->and(Numberable::make(3.5)->isPrime())->toBeFalse();
+});
+
+test('comparison helpers work', function () {
+    $number = Numberable::make(10);
+
+    expect($number->equals(10))->toBeTrue()
+        ->and($number->equals(10.001, 0.01))->toBeTrue()
+        ->and($number->greaterThan(9))->toBeTrue()
+        ->and($number->greaterThanOrEqualTo(10))->toBeTrue()
+        ->and($number->lessThan(11))->toBeTrue()
+        ->and($number->lessThanOrEqualTo(10))->toBeTrue()
+        ->and($number->between(5, 10))->toBeTrue()
+        ->and($number->between(10, 5))->toBeTrue()
+        ->and($number->between(10, 20, inclusive: false))->toBeFalse();
+});

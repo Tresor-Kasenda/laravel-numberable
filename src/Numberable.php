@@ -3,7 +3,10 @@
 namespace TresorKasenda\Numberable;
 
 use Illuminate\Support\Number;
+use Illuminate\Support\Traits\Conditionable;
+use Illuminate\Support\Traits\Dumpable;
 use Illuminate\Support\Traits\Macroable;
+use Illuminate\Support\Traits\Tappable;
 use Stringable;
 
 /**
@@ -11,7 +14,10 @@ use Stringable;
  */
 class Numberable implements Stringable
 {
+    use Conditionable;
+    use Dumpable;
     use Macroable;
+    use Tappable;
 
     protected int|float $value;
 
@@ -40,6 +46,16 @@ class Numberable implements Stringable
     public static function make(int|float $value): static
     {
         return new static($value);
+    }
+
+    public static function of(int|float $value): static
+    {
+        return static::make($value);
+    }
+
+    public static function from(int|float|string $value, ?string $locale = null): static
+    {
+        return static::parse($value, $locale);
     }
 
     public static function parse(int|float|string $value, ?string $locale = null): static
@@ -261,6 +277,22 @@ class Numberable implements Stringable
         return $clone;
     }
 
+    public function clamp(int|float $min, int|float $max): static
+    {
+        $clone = clone $this;
+        $clone->value = Number::clamp($this->value, $min, $max);
+
+        return $clone;
+    }
+
+    public function trim(): static
+    {
+        $clone = clone $this;
+        $clone->value = Number::trim($this->value);
+
+        return $clone;
+    }
+
 
     public function isInt(): bool
     {
@@ -285,6 +317,107 @@ class Numberable implements Stringable
     public function isZero(): bool
     {
         return $this->value === 0 || $this->value === 0.0;
+    }
+
+    public function isEven(): bool
+    {
+        return $this->isInt() && ((int) $this->value % 2 === 0);
+    }
+
+    public function isOdd(): bool
+    {
+        return $this->isInt() && ((int) $this->value % 2 !== 0);
+    }
+
+    public function isMultipleOf(int|float $value, float $epsilon = 1e-12): bool
+    {
+        if ($value === 0 || $value === 0.0) {
+            throw new \DivisionByZeroError('Cannot determine multiple of zero.');
+        }
+
+        if ($this->isInt() && (is_int($value) || fmod($value, 1) === 0.0)) {
+            return ((int) $this->value % (int) $value) === 0;
+        }
+
+        $remainder = fmod((float) $this->value, (float) $value);
+        $divisor = abs((float) $value);
+
+        return abs($remainder) <= $epsilon
+            || abs($remainder - $divisor) <= $epsilon
+            || abs($remainder + $divisor) <= $epsilon;
+    }
+
+    public function isPrime(): bool
+    {
+        if (! $this->isInt()) {
+            return false;
+        }
+
+        if (abs((float) $this->value) > PHP_INT_MAX) {
+            return false;
+        }
+
+        $number = (int) $this->value;
+
+        if ($number <= 1) {
+            return false;
+        }
+
+        if ($number <= 3) {
+            return true;
+        }
+
+        if ($number % 2 === 0) {
+            return false;
+        }
+
+        $limit = (int) sqrt($number);
+
+        for ($divisor = 3; $divisor <= $limit; $divisor += 2) {
+            if ($number % $divisor === 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function equals(int|float $value, float $epsilon = 0.0): bool
+    {
+        return $epsilon > 0
+            ? abs($this->value - $value) <= $epsilon
+            : $this->value == $value;
+    }
+
+    public function greaterThan(int|float $value): bool
+    {
+        return $this->value > $value;
+    }
+
+    public function greaterThanOrEqualTo(int|float $value): bool
+    {
+        return $this->value >= $value;
+    }
+
+    public function lessThan(int|float $value): bool
+    {
+        return $this->value < $value;
+    }
+
+    public function lessThanOrEqualTo(int|float $value): bool
+    {
+        return $this->value <= $value;
+    }
+
+    public function between(int|float $min, int|float $max, bool $inclusive = true): bool
+    {
+        if ($min > $max) {
+            [$min, $max] = [$max, $min];
+        }
+
+        return $inclusive
+            ? $this->value >= $min && $this->value <= $max
+            : $this->value > $min && $this->value < $max;
     }
 
 

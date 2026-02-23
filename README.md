@@ -40,12 +40,14 @@ use TresorKasenda\Numberable\Numberable;
 
 // Using the static factory
 $n = Numberable::make(42);
+$n = Numberable::of(42); // alias
 
 // Using the global helper
 $n = number(42);
 
 // Parsing strings (handles comma decimals)
 $n = Numberable::parse('1.234,56', 'de_DE');
+$n = Numberable::from('1.234,56', 'de_DE'); // alias
 
 // Strict type parsing
 $n = Numberable::parseInt('42');   // int
@@ -71,6 +73,8 @@ $price->abs();           // 100 (useful for negatives)
 $price->round(2);        // rounds to 2 decimals
 $price->floor();         // rounds down
 $price->ceil();          // rounds up
+$price->clamp(0, 100);   // keeps the value between 0 and 100
+$price->trim();          // removes trailing decimal zeros (10.0 => 10)
 ```
 
 ### Chaining
@@ -170,9 +174,38 @@ number(3.14159)
 number(42)->isInt();       // true
 number(3.14)->isInt();     // false
 number(3.14)->isFloat();   // true
+number(4)->isEven();       // true
+number(5)->isOdd();        // true
+number(12)->isMultipleOf(3); // true
+number(17)->isPrime();     // true
 number(5)->isPositive();   // true
 number(-5)->isNegative();  // true
 number(0)->isZero();       // true
+```
+
+## Comparisons
+
+```php
+$n = number(10);
+
+$n->equals(10);                     // true
+$n->greaterThan(5);                 // true
+$n->greaterThanOrEqualTo(10);       // true
+$n->lessThan(20);                   // true
+$n->lessThanOrEqualTo(10);          // true
+$n->between(5, 10);                 // true (inclusive by default)
+$n->between(5, 10, false);          // false if exactly on boundary
+```
+
+## Conditional / Tap Helpers
+
+`Numberable` now includes Laravel's `Conditionable` and `Tappable` traits:
+
+```php
+$result = number(100)
+    ->when(app()->isProduction(), fn ($n) => $n->multiply(1.2))
+    ->unless(auth()->check(), fn ($n) => $n->add(10))
+    ->tap(fn ($n) => logger()->info('Computed total', ['value' => $n->value()]));
 ```
 
 ## Value Accessors
