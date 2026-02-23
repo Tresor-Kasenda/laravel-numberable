@@ -2,12 +2,6 @@
 
 use TresorKasenda\Numberable\Numberable;
 
-/*
-|--------------------------------------------------------------------------
-| Factory Methods
-|--------------------------------------------------------------------------
-*/
-
 test('make() creates a Numberable instance with an integer', function () {
     $number = Numberable::make(42);
 
@@ -81,12 +75,6 @@ test('parseFloat() creates a float Numberable from a string', function () {
     expect($number->value())->toBe(3.14)
         ->and($number->value())->toBeFloat();
 });
-
-/*
-|--------------------------------------------------------------------------
-| Immutability
-|--------------------------------------------------------------------------
-*/
 
 test('fluent methods return new instances (immutability)', function () {
     $original = Numberable::make(10);
@@ -241,12 +229,6 @@ test('ceil() with negative numbers', function () {
     expect($result->value())->toBe(-4.0);
 });
 
-/*
-|--------------------------------------------------------------------------
-| Chaining Arithmetic
-|--------------------------------------------------------------------------
-*/
-
 test('arithmetic operations can be chained fluently', function () {
     $result = Numberable::make(10)
         ->add(5)
@@ -256,12 +238,6 @@ test('arithmetic operations can be chained fluently', function () {
 
     expect($result->value())->toEqual(10);
 });
-
-/*
-|--------------------------------------------------------------------------
-| Type Checks
-|--------------------------------------------------------------------------
-*/
 
 test('isInt() returns true for integers', function () {
     expect(Numberable::make(42)->isInt())->toBeTrue();
@@ -319,11 +295,6 @@ test('isZero() returns false for non-zero values', function () {
     expect(Numberable::make(1)->isZero())->toBeFalse();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Value Accessors
-|--------------------------------------------------------------------------
-*/
 
 test('value() returns the raw value', function () {
     expect(Numberable::make(42)->value())->toBe(42);
@@ -343,11 +314,6 @@ test('toFloat() casts to float', function () {
         ->and($result)->toBeFloat();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Pairs
-|--------------------------------------------------------------------------
-*/
 
 test('pairs() generates correct range pairs', function () {
     $pairs = Numberable::make(0)->pairs(10, 3);
@@ -383,11 +349,6 @@ test('pairs() returns empty array for count zero', function () {
     expect($pairs)->toBeEmpty();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Formatting — Basic
-|--------------------------------------------------------------------------
-*/
 
 test('format() returns a formatted string', function () {
     $result = Numberable::make(1234567)->format();
@@ -414,11 +375,6 @@ test('format() with locale', function () {
     expect($result)->toBeString();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Formatting — Styles
-|--------------------------------------------------------------------------
-*/
 
 test('asPercentage() formats as percentage', function () {
     $result = Numberable::make(75)->asPercentage()->format();
@@ -487,11 +443,6 @@ test('asAbbreviated() abbreviates millions', function () {
         ->and($result)->toContain('M');
 });
 
-/*
-|--------------------------------------------------------------------------
-| formatAs() Directly
-|--------------------------------------------------------------------------
-*/
 
 test('formatAs() with currency style', function () {
     $result = Numberable::make(50)->formatAs('currency', ['currency' => 'USD']);
@@ -545,11 +496,6 @@ test('formatAs() with unknown style throws InvalidArgumentException', function (
     Numberable::make(42)->formatAs('unknown_style');
 })->throws(\InvalidArgumentException::class, 'Unknown format style: [unknown_style]');
 
-/*
-|--------------------------------------------------------------------------
-| Custom Formats
-|--------------------------------------------------------------------------
-*/
 
 test('registerFormat() adds a custom format', function () {
     Numberable::registerFormat('double', fn ($value) => $value * 2);
@@ -589,11 +535,6 @@ test('flushFormats() removes all custom formats', function () {
     Numberable::make(1)->formatAs('test');
 })->throws(\InvalidArgumentException::class);
 
-/*
-|--------------------------------------------------------------------------
-| Stringable / __toString
-|--------------------------------------------------------------------------
-*/
 
 test('Numberable implements Stringable', function () {
     $number = Numberable::make(42);
@@ -632,11 +573,6 @@ test('casting to string in interpolation works', function () {
     expect($message)->toBe('The answer is 42');
 });
 
-/*
-|--------------------------------------------------------------------------
-| Edge Cases
-|--------------------------------------------------------------------------
-*/
 
 test('very large numbers are handled', function () {
     $result = Numberable::make(PHP_INT_MAX)->value();
@@ -663,4 +599,103 @@ test('chaining with formatting produces correct output', function () {
 
     expect($result)->toContain('300')
         ->and($result)->toContain('%');
+});
+
+
+test('can create via make()', function () {
+    $n = Numberable::make(42);
+    expect($n->value())->toBe(42);
+});
+
+test('can parse string fr_FR', function () {
+    $n = Numberable::parse('1 234,56', 'fr_FR');
+    expect($n->toFloat())->toBeFloat();
+});
+
+
+test('add', function () {
+    expect(Numberable::make(10)->add(5)->value())->toBe(15);
+});
+
+test('subtract', function () {
+    expect(Numberable::make(10)->subtract(3)->value())->toBe(7);
+});
+
+test('multiply', function () {
+    expect(Numberable::make(4)->multiply(3)->value())->toBe(12);
+});
+
+test('divide', function () {
+    expect(Numberable::make(10)->divide(2)->value())->toEqual(5);
+});
+
+test('divide by zero throws', function () {
+    Numberable::make(10)->divide(0);
+})->throws(\DivisionByZeroError::class);
+
+test('pow', function () {
+    expect(Numberable::make(2)->pow(10)->value())->toEqual(1024);
+});
+
+test('abs of negative', function () {
+    expect(Numberable::make(-5)->abs()->value())->toEqual(5);
+});
+
+test('round', function () {
+    expect(Numberable::make(3.14159)->round(2)->value())->toBe(3.14);
+});
+
+test('floor', function () {
+    expect(Numberable::make(3.9)->floor()->value())->toBe(3.0);
+});
+
+test('ceil', function () {
+    expect(Numberable::make(3.1)->ceil()->value())->toBe(4.0);
+});
+
+
+test('fluent chain', function () {
+    $result = Numberable::make(42)->add(8)->multiply(2)->round(1);
+    expect($result->value())->toBe(100.0);
+});
+
+
+test('isInt', function () {
+    expect(Numberable::make(5)->isInt())->toBeTrue();
+    expect(Numberable::make(5.5)->isInt())->toBeFalse();
+});
+
+test('isPositive / isNegative', function () {
+    expect(Numberable::make(5)->isPositive())->toBeTrue();
+    expect(Numberable::make(-5)->isNegative())->toBeTrue();
+});
+
+
+test('custom format registry', function () {
+    Numberable::registerFormat('compact', fn($v) => 'v:' . (int)$v);
+    $result = Numberable::make(512)->formatAs('compact');
+    expect($result)->toBe('v:512');
+    Numberable::flushFormats();
+});
+
+
+test('asPercentage wither + divide', function () {
+    // 0.5 as percentage / 2 → 25%
+    $result = Numberable::make(0.5)
+        ->asPercentage()
+        ->multiply(100)
+        ->divide(2)
+        ->formatAs('percentage');
+    expect($result)->toContain('25');
+});
+
+
+test('number() helper returns Numberable', function () {
+    $n = number(42);
+    expect($n)->toBeInstanceOf(Numberable::class);
+    expect($n->add(8)->value())->toBe(50);
+});
+
+test('number() helper returns null for null', function () {
+    expect(number(null))->toBeNull();
 });
