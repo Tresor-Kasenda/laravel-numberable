@@ -42,7 +42,7 @@ jobs:
           composer update --prefer-dist --no-interaction --no-progress
 
       - name: Run tests
-        run: vendor/bin/pest --ci
+        run: vendor/bin/pest
 
   static-analysis:
     runs-on: ubuntu-latest
