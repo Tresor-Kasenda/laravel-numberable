@@ -3,10 +3,13 @@
 namespace TresorKasenda\Numberable;
 
 use Illuminate\Support\Number;
+use Illuminate\Support\Traits\Macroable;
 use Stringable;
 
 class Numberable implements Stringable
 {
+    use Macroable;
+
     protected int|float $value;
 
     protected ?string $locale = null;
