@@ -4,7 +4,7 @@ namespace TresorKasenda\Numberable\Concerns;
 
 trait Dumpable
 {
-    public function dump(...$args): static
+    public function dump(mixed ...$args): static
     {
         $values = $args !== [] ? $args : [$this];
 
@@ -19,7 +19,7 @@ trait Dumpable
         return $this;
     }
 
-    public function dd(...$args): never
+    public function dd(mixed ...$args): never
     {
         $values = $args !== [] ? $args : [$this];
 

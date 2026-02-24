@@ -289,7 +289,21 @@ class Numberable implements Stringable
     public function trim(): static
     {
         $clone = clone $this;
-        $clone->value = Number::trim($this->value);
+
+        if (method_exists(Number::class, 'trim')) { // @phpstan-ignore function.alreadyNarrowedType
+            $clone->value = Number::trim($this->value);
+
+            return $clone;
+        }
+
+        if (is_int($this->value)) {
+            $clone->value = $this->value;
+
+            return $clone;
+        }
+
+        $trimmed = rtrim(rtrim(sprintf('%.14F', $this->value), '0'), '.');
+        $clone->value = str_contains($trimmed, '.') ? (float) $trimmed : (int) $trimmed;
 
         return $clone;
     }
