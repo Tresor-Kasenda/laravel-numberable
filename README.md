@@ -88,7 +88,7 @@ $result = number(100)
     ->subtract(10)
     ->divide(3)
     ->round(2)
-    ->value(); // 63.33
+    ->value(); // 96.67
 ```
 
 > Division by zero throws a `\DivisionByZeroError`.
