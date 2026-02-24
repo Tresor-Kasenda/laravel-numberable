@@ -45,7 +45,7 @@ jobs:
           composer update --prefer-dist --no-interaction --no-progress
 
       - name: Run tests
-        run: vendor/bin/pest --configuration=phpunit.xml
+        run: vendor/bin/pest -c phpunit.xml --cache-directory=.phpunit.cache
 
   static-analysis:
     runs-on: ubuntu-latest
