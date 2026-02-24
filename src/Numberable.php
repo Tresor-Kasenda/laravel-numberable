@@ -4,10 +4,11 @@ namespace TresorKasenda\Numberable;
 
 use Illuminate\Support\Number;
 use Illuminate\Support\Traits\Conditionable;
-use Illuminate\Support\Traits\Dumpable;
 use Illuminate\Support\Traits\Macroable;
 use Illuminate\Support\Traits\Tappable;
+use NumberFormatter;
 use Stringable;
+use TresorKasenda\Numberable\Concerns\Dumpable;
 
 /**
  * @phpstan-consistent-constructor
@@ -61,8 +62,8 @@ class Numberable implements Stringable
     public static function parse(int|float|string $value, ?string $locale = null): static
     {
         if (is_string($value)) {
-            if ($locale !== null && class_exists(\NumberFormatter::class)) {
-                $formatter = new \NumberFormatter($locale, \NumberFormatter::DECIMAL);
+            if ($locale !== null && class_exists(NumberFormatter::class)) {
+                $formatter = new NumberFormatter($locale, NumberFormatter::DECIMAL);
                 $parsed = $formatter->parse($value);
                 $value = $parsed !== false ? $parsed : (float) str_replace(',', '.', $value);
             } else {
