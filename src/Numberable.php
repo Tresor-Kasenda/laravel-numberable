@@ -20,7 +20,13 @@ class Numberable implements Stringable
     use Macroable;
     use Tappable;
 
+    private const BIG_DECIMAL_CLASS = 'Brick\\Math\\BigDecimal';
+
+    private const ROUNDING_MODE_CLASS = 'Brick\\Math\\RoundingMode';
+
     protected int|float $value;
+
+    protected ?string $preciseValue = null;
 
     protected ?string $locale = null;
 
@@ -82,6 +88,123 @@ class Numberable implements Stringable
     public static function parseFloat(float|string $value): static
     {
         return new static((float) $value);
+    }
+
+    public static function supportsArbitraryPrecision(): bool
+    {
+        return class_exists(self::BIG_DECIMAL_CLASS);
+    }
+
+    public static function fromDecimal(int|float|string $value): static
+    {
+        $decimal = self::normalizeDecimalInput($value);
+
+        $instance = new static(self::decimalToNumeric($decimal));
+        $instance->preciseValue = $decimal;
+
+        return $instance;
+    }
+
+    public function preciseValue(): string
+    {
+        return $this->preciseValue ?? self::stringifyValue($this->value);
+    }
+
+    public function addPrecise(int|float|string $value): static
+    {
+        return $this->performPreciseBinaryOperation(
+            $value,
+            static fn ($left, $right) => $left->plus($right),
+        );
+    }
+
+    public function subtractPrecise(int|float|string $value): static
+    {
+        return $this->performPreciseBinaryOperation(
+            $value,
+            static fn ($left, $right) => $left->minus($right),
+        );
+    }
+
+    public function multiplyPrecise(int|float|string $value): static
+    {
+        return $this->performPreciseBinaryOperation(
+            $value,
+            static fn ($left, $right) => $left->multipliedBy($right),
+        );
+    }
+
+    public function dividePrecise(int|float|string $value, int $scale = 14, string $roundingMode = 'HALF_UP'): static
+    {
+        if ($scale < 0) {
+            throw new \InvalidArgumentException('Scale must not be negative.');
+        }
+
+        $resolvedMode = self::resolveRoundingMode($roundingMode);
+
+        try {
+            return $this->performPreciseBinaryOperation(
+                $value,
+                static fn ($left, $right) => $left->dividedBy($right, $scale, $resolvedMode),
+            );
+        } catch (\Throwable $e) {
+            if (is_a($e, 'Brick\\Math\\Exception\\DivisionByZeroException')) {
+                throw new \DivisionByZeroError('Division by zero.', 0, $e);
+            }
+
+            throw $e;
+        }
+    }
+
+    public function modPrecise(int|float|string $value): static
+    {
+        try {
+            return $this->performPreciseBinaryOperation(
+                $value,
+                static fn ($left, $right) => $left->remainder($right),
+            );
+        } catch (\Throwable $e) {
+            if (is_a($e, 'Brick\\Math\\Exception\\DivisionByZeroException')) {
+                throw new \DivisionByZeroError('Division by zero.', 0, $e);
+            }
+
+            throw $e;
+        }
+    }
+
+    public function roundPrecise(int $scale, string $roundingMode = 'HALF_UP'): static
+    {
+        if ($scale < 0) {
+            throw new \InvalidArgumentException('Scale must not be negative.');
+        }
+
+        $decimal = $this->toBigDecimal();
+        $resolvedMode = self::resolveRoundingMode($roundingMode);
+
+        return $this->cloneWithPreciseValue((string) $decimal->toScale($scale, $resolvedMode));
+    }
+
+    public function comparePrecise(int|float|string $value): int
+    {
+        $decimal = $this->toBigDecimal();
+        $other = self::makeBigDecimal($value);
+
+        return $decimal->compareTo($other);
+    }
+
+    public function equalsPrecise(int|float|string $value): bool
+    {
+        return $this->comparePrecise($value) === 0;
+    }
+
+    /**
+     * @return mixed BigDecimal instance
+     */
+    public function toBigDecimal(): mixed
+    {
+        $source = $this->preciseValue ?? self::stringifyValue($this->value);
+
+        return self::makeBigDecimal($source);
     }
 
 
@@ -198,6 +321,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value += $value;
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -206,6 +330,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value -= $value;
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -214,6 +339,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value *= $value;
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -226,6 +352,7 @@ class Numberable implements Stringable
 
         $clone = clone $this;
         $clone->value /= $value;
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -234,6 +361,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value = fmod($this->value, $value);
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -242,6 +370,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value = $this->value ** $exponent;
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -250,6 +379,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value = abs($this->value);
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -258,6 +388,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value = round($this->value, $precision, $mode); // @phpstan-ignore argument.type
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -266,6 +397,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value = floor($this->value);
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -274,6 +406,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value = ceil($this->value);
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -282,6 +415,7 @@ class Numberable implements Stringable
     {
         $clone = clone $this;
         $clone->value = Number::clamp($this->value, $min, $max);
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -292,18 +426,21 @@ class Numberable implements Stringable
 
         if (method_exists(Number::class, 'trim')) { // @phpstan-ignore function.alreadyNarrowedType
             $clone->value = Number::trim($this->value);
+            $clone->preciseValue = null;
 
             return $clone;
         }
 
         if (is_int($this->value)) {
             $clone->value = $this->value;
+            $clone->preciseValue = null;
 
             return $clone;
         }
 
         $trimmed = rtrim(rtrim(sprintf('%.14F', $this->value), '0'), '.');
         $clone->value = str_contains($trimmed, '.') ? (float) $trimmed : (int) $trimmed;
+        $clone->preciseValue = null;
 
         return $clone;
     }
@@ -504,6 +641,122 @@ class Numberable implements Stringable
         };
     }
 
+    /**
+     * @param  callable(mixed, mixed): mixed  $operation
+     */
+    private function performPreciseBinaryOperation(int|float|string $value, callable $operation): static
+    {
+        $left = $this->toBigDecimal();
+        $right = self::makeBigDecimal($value);
+        $result = $operation($left, $right);
+
+        return $this->cloneWithPreciseValue((string) $result);
+    }
+
+    private function cloneWithPreciseValue(string $value): static
+    {
+        $clone = clone $this;
+        $clone->preciseValue = $value;
+        $clone->value = self::decimalToNumeric($value);
+
+        return $clone;
+    }
+
+    /**
+     * @return mixed BigDecimal instance
+     */
+    private static function makeBigDecimal(int|float|string $value): mixed
+    {
+        self::assertArbitraryPrecisionAvailable();
+
+        $class = self::BIG_DECIMAL_CLASS;
+        $input = self::normalizeDecimalInput($value);
+
+        try {
+            return $class::of($input);
+        } catch (\Throwable $e) {
+            $raw = is_string($value) ? $value : self::stringifyValue($value);
+
+            throw new \InvalidArgumentException("Invalid decimal value: [{$raw}].", 0, $e);
+        }
+    }
+
+    /**
+     * @return mixed RoundingMode enum case or legacy constant value
+     */
+    private static function resolveRoundingMode(string $roundingMode): mixed
+    {
+        self::assertArbitraryPrecisionAvailable();
+
+        $normalized = strtoupper(str_replace(['-', ' '], '_', trim($roundingMode)));
+
+        if ($normalized === '') {
+            throw new \InvalidArgumentException('Rounding mode cannot be empty.');
+        }
+
+        $constant = self::ROUNDING_MODE_CLASS . "::{$normalized}";
+
+        if (! defined($constant)) {
+            throw new \InvalidArgumentException("Unknown rounding mode: [{$roundingMode}].");
+        }
+
+        return constant($constant);
+    }
+
+    private static function normalizeDecimalInput(int|float|string $value): string
+    {
+        if (is_int($value)) {
+            return (string) $value;
+        }
+
+        if (is_float($value)) {
+            if (is_infinite($value) || is_nan($value)) {
+                throw new \InvalidArgumentException('Decimal value must be finite.');
+            }
+
+            return (string) $value;
+        }
+
+        $normalized = trim(str_replace(',', '.', $value));
+
+        if ($normalized === '') {
+            throw new \InvalidArgumentException('Decimal value cannot be empty.');
+        }
+
+        if (! preg_match('/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/', $normalized)) {
+            throw new \InvalidArgumentException("Invalid decimal value: [{$value}].");
+        }
+
+        return $normalized;
+    }
+
+    private static function stringifyValue(int|float $value): string
+    {
+        return (string) $value;
+    }
+
+    private static function decimalToNumeric(string $value): int|float
+    {
+        if (! str_contains($value, '.') && ! str_contains($value, 'e') && ! str_contains($value, 'E')) {
+            $integer = filter_var($value, FILTER_VALIDATE_INT);
+
+            if ($integer !== false) {
+                return $integer;
+            }
+        }
+
+        return (float) $value;
+    }
+
+    private static function assertArbitraryPrecisionAvailable(): void
+    {
+        if (! self::supportsArbitraryPrecision()) {
+            throw new \LogicException(
+                'Arbitrary precision requires brick/math. Install it with: composer require brick/math.'
+            );
+        }
+    }
+
 
     public static function registerFormat(string $name, callable $formatter): void
     {
@@ -534,6 +787,18 @@ class Numberable implements Stringable
     {
         if ($this->formatStyle !== null) {
             return $this->format();
+        }
+
+        if ($this->preciseValue !== null) {
+            if ($this->precision !== null) {
+                if (self::supportsArbitraryPrecision()) {
+                    return (string) $this->toBigDecimal()->toScale($this->precision, self::resolveRoundingMode('HALF_UP'));
+                }
+
+                return number_format($this->value, $this->precision);
+            }
+
+            return $this->preciseValue;
         }
 
         return $this->precision !== null

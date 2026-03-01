@@ -30,6 +30,9 @@
         "orchestra/testbench": "^9.0|^10.0",
         "phpstan/phpstan": "^2.1"
     },
+    "suggest": {
+        "brick/math": "^0.9|^0.12"
+    },
     "autoload": {
         "psr-4": {
             "TresorKasenda\\Numberable\\": "src/"

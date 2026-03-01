@@ -22,6 +22,7 @@ Numberable::make(1500)
 - PHP 8.3+
 - Laravel 10, 11, or 12
 - `ext-intl` PHP extension
+- Optional: `brick/math` for arbitrary-precision decimal math
 
 ## Installation
 
@@ -30,6 +31,12 @@ composer require tresor-kasenda/laravel-numberable
 ```
 
 The package auto-registers its service provider via Laravel's package discovery.
+
+For arbitrary-precision decimal operations (`addPrecise()`, `dividePrecise()`, etc.), install:
+
+```bash
+composer require brick/math
+```
 
 ## Quick Start
 
@@ -92,6 +99,28 @@ $result = number(100)
 ```
 
 > Division by zero throws a `\DivisionByZeroError`.
+
+### Arbitrary Precision (Optional)
+
+When `brick/math` is installed, you can perform decimal operations without float drift:
+
+```php
+$result = Numberable::fromDecimal('0.1')
+    ->addPrecise('0.2')
+    ->multiplyPrecise('3')
+    ->dividePrecise('7', scale: 8)
+    ->roundPrecise(4)
+    ->preciseValue(); // "0.1286"
+```
+
+Available precise methods:
+
+- `Numberable::supportsArbitraryPrecision()`
+- `Numberable::fromDecimal(int|float|string $value)`
+- `->addPrecise()`, `->subtractPrecise()`, `->multiplyPrecise()`
+- `->dividePrecise(int|float|string $value, int $scale = 14, string $roundingMode = 'HALF_UP')`
+- `->modPrecise()`, `->roundPrecise()`
+- `->comparePrecise()`, `->equalsPrecise()`, `->preciseValue()`
 
 ## Formatting
 

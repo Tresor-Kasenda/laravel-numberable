@@ -239,6 +239,108 @@ test('arithmetic operations can be chained fluently', function () {
     expect($result->value())->toEqual(10);
 });
 
+test('supportsArbitraryPrecision() returns a boolean', function () {
+    expect(Numberable::supportsArbitraryPrecision())->toBeBool();
+});
+
+test('fromDecimal() keeps the exact decimal representation', function () {
+    $number = Numberable::fromDecimal('1.2300');
+
+    expect($number->preciseValue())->toBe('1.2300')
+        ->and((string) $number)->toBe('1.2300');
+});
+
+test('addPrecise() avoids floating-point drift', function () {
+    if (! Numberable::supportsArbitraryPrecision()) {
+        expect(fn () => Numberable::make(0.1)->addPrecise('0.2'))
+            ->toThrow(\LogicException::class);
+
+        return;
+    }
+
+    $result = Numberable::fromDecimal('0.1')->addPrecise('0.2');
+
+    expect($result->preciseValue())->toBe('0.3')
+        ->and($result->value())->toBe(0.3);
+});
+
+test('dividePrecise() supports scale and rounding', function () {
+    if (! Numberable::supportsArbitraryPrecision()) {
+        expect(fn () => Numberable::make(1)->dividePrecise('3', 6))
+            ->toThrow(\LogicException::class);
+
+        return;
+    }
+
+    $result = Numberable::fromDecimal('1')->dividePrecise('3', 6);
+
+    expect($result->preciseValue())->toBe('0.333333');
+});
+
+test('dividePrecise() by zero throws DivisionByZeroError', function () {
+    if (! Numberable::supportsArbitraryPrecision()) {
+        expect(fn () => Numberable::make(1)->dividePrecise('0', 2))
+            ->toThrow(\LogicException::class);
+
+        return;
+    }
+
+    Numberable::fromDecimal('1')->dividePrecise('0', 2);
+})->throws(\DivisionByZeroError::class, 'Division by zero.');
+
+test('modPrecise() computes decimal remainders', function () {
+    if (! Numberable::supportsArbitraryPrecision()) {
+        expect(fn () => Numberable::make(1)->modPrecise('0.3'))
+            ->toThrow(\LogicException::class);
+
+        return;
+    }
+
+    $result = Numberable::fromDecimal('1')->modPrecise('0.3');
+
+    expect($result->preciseValue())->toBe('0.1');
+});
+
+test('roundPrecise() rounds half up by default', function () {
+    if (! Numberable::supportsArbitraryPrecision()) {
+        expect(fn () => Numberable::make(1.005)->roundPrecise(2))
+            ->toThrow(\LogicException::class);
+
+        return;
+    }
+
+    $result = Numberable::fromDecimal('1.005')->roundPrecise(2);
+
+    expect($result->preciseValue())->toBe('1.01')
+        ->and((string) $result)->toBe('1.01');
+});
+
+test('comparePrecise() and equalsPrecise() compare decimals exactly', function () {
+    if (! Numberable::supportsArbitraryPrecision()) {
+        expect(fn () => Numberable::make(1)->comparePrecise('1.0'))
+            ->toThrow(\LogicException::class);
+
+        return;
+    }
+
+    $number = Numberable::fromDecimal('1.20');
+
+    expect($number->comparePrecise('1.2'))->toBe(0)
+        ->and($number->equalsPrecise('1.2'))->toBeTrue()
+        ->and($number->comparePrecise('1.2001'))->toBe(-1);
+});
+
+test('roundPrecise() throws on invalid rounding mode', function () {
+    if (! Numberable::supportsArbitraryPrecision()) {
+        expect(fn () => Numberable::make(1)->roundPrecise(2, 'UNKNOWN'))
+            ->toThrow(\LogicException::class);
+
+        return;
+    }
+
+    Numberable::fromDecimal('1')->roundPrecise(2, 'UNKNOWN');
+})->throws(\InvalidArgumentException::class, 'Unknown rounding mode: [UNKNOWN].');
+
 test('isInt() returns true for integers', function () {
     expect(Numberable::make(42)->isInt())->toBeTrue();
 });
